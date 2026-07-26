@@ -1,64 +1,50 @@
-# 引入剛才建立的 5 個引擎
 from src.scanners import quant_engine
 from src.scanners import quant_flow
 from src.scanners import stock_engine
 from src.scanners import stock_scanner_engine
 from src.scanners import stock_alert_system
-
-# 引入推播功能
 from src.utils.notifier import send_bark_notification
+import datetime
+
+def build_webpage(stocks):
+    """把股票名單畫成網頁"""
+    now = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+    time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+    
+    if not stocks:
+        stock_html = "<li style='background:#f3f4f6; color:#6b7280; font-weight:normal;'>今天沒有符合條件的股票 😴</li>"
+    else:
+        stock_html = "".join([f"<li>📈 {s}</li>" for s in stocks])
+
+    html = f"""<!DOCTYPE html>
+<html lang="zh-TW">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>臨玖的量化系統</title><style>body {{ font-family: -apple-system, sans-serif; background: #f3f4f6; padding: 20px; }}.box {{ max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}h1 {{ text-align: center; font-size: 24px; margin-bottom: 5px; }}ul {{ list-style: none; padding: 0; }}li {{ background: #eff6ff; color: #1d4ed8; padding: 15px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; font-size: 18px; text-align: center; }}</style></head>
+<body><div class="box"><h1>🎯 聯合掃描報告</h1><p style="text-align:center; color:#6b7280; font-size:14px; margin-bottom:20px;">最後更新：{time_str}</p><ul>{stock_html}</ul></div></body></html>"""
+    
+    with open("index.html", "w", encoding="utf-8") as file:
+        file.write(html)
+    print("🌐 網頁版 index.html 已生成！")
 
 def main():
     all_stocks = []
+    try: all_stocks.extend(quant_engine.run())
+    except: pass
+    try: all_stocks.extend(quant_flow.run())
+    except: pass
+    try: all_stocks.extend(stock_engine.run())
+    except: pass
+    try: all_stocks.extend(stock_scanner_engine.run())
+    except: pass
+    try: all_stocks.extend(stock_alert_system.run())
+    except: pass
 
-    print("🔍 開始執行 5 大美股引擎...")
-
-    # 1. 執行 Quant-Engine
-    try:
-        all_stocks.extend(quant_engine.run())
-    except Exception as e:
-        print(f"Quant-Engine 錯誤: {e}")
-
-    # 2. 執行 QuantFlow
-    try:
-        all_stocks.extend(quant_flow.run())
-    except Exception as e:
-        print(f"QuantFlow 錯誤: {e}")
-
-    # 3. 執行 Stock-Engine
-    try:
-        all_stocks.extend(stock_engine.run())
-    except Exception as e:
-        print(f"Stock-Engine 錯誤: {e}")
-
-    # 4. 執行 Stock-Scanner-Engine
-    try:
-        all_stocks.extend(stock_scanner_engine.run())
-    except Exception as e:
-        print(f"Stock-Scanner-Engine 錯誤: {e}")
-
-    # 5. 執行 stock-alert-system
-    try:
-        all_stocks.extend(stock_alert_system.run())
-    except Exception as e:
-        print(f"stock-alert-system 錯誤: {e}")
-
-    # 目前 all_stocks 裡面包含所有股票 (包含重複的)
-    print(f"原始收集到的股票: {all_stocks}")
-    
-    # 施展魔法：過濾重複！用 set() 把它變成沒有重複的集合
     unique_stocks = list(set(all_stocks))
-    
-    # 幫股票按照英文字母排個序，比較好看
     unique_stocks.sort()
-    
-    print(f"最終過濾後的股票: {unique_stocks}")
 
-    # 如果有股票，就發送到手機 Bark
+    build_webpage(unique_stocks) # 觸發做網頁的功能
+    
     if len(unique_stocks) > 0:
         send_bark_notification(unique_stocks)
-    else:
-        print("今天沒有符合條件的股票。")
 
 if __name__ == "__main__":
     main()
