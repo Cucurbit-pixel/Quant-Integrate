@@ -2,8 +2,12 @@ name: Daily US Stock
 
 on:
   schedule:
-    - cron: '30 21 * * 1-5' # 美股收盤後，台灣/香港時間大約早上 5:30 執行
-  workflow_dispatch: # 允許我們等下手動點擊測試
+    - cron: '30 21 * * 1-5'
+  workflow_dispatch:
+
+# 加入這行：給機器人寫入網頁檔案的權限！
+permissions:
+  contents: write
 
 jobs:
   run-system:
@@ -14,7 +18,16 @@ jobs:
       with:
         python-version: '3.10'
     - run: pip install -r requirements.txt
-    - env:
-        # 把 GitHub 密碼庫的 BARK_KEY 拿出來給 Python 用
+    
+    - name: 執行美股系統
+      env:
         BARK_KEY: ${{ secrets.BARK_KEY }}
       run: python main.py
+      
+    - name: 🌐 將新生成的網頁存檔並上傳
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add index.html
+        git commit -m "自動更新網頁版報告" || echo "無變化"
+        git push
